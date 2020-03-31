@@ -58,8 +58,8 @@ def fetchCurrentTime():
 
 
 def getQ1(res):
-    uri = f"/collections/{int(res[0])}"
-    id = f"{int(res[0])}"
+    uri = f"/collections/{int(res[12])}"
+    id = f"{int(res[12])}"
     creation_time = f"{res[11]}"
     indicator_id = f"{res[1]}"
 
@@ -83,7 +83,7 @@ def handlePost(data, query):
             id = 1
         else:
             id += 1
-        print("id:", id)
+        # print("id:", id)
         updateTableId(data, id)
         res = handleCommand(
             f"Select * from countries where indicator_id = '{query}'")
@@ -94,7 +94,7 @@ def handlePost(data, query):
 def handleCommand(command):
     conn = sqlite3.connect('z5177443.db')
     cursor = conn.cursor()
-    print(command)
+    # print(command)
     # Insert a row of data
     cursor.execute(command)
     result = cursor.fetchall()
@@ -132,9 +132,9 @@ class Collections(Resource):
         if res[0] == {"message": "No data in the database!"}:
             return {"message": "No data in the database!"}, 404
         else:
-            print(res)
+            # print(res)
             splitQuery = query.split(",")
-            print(splitQuery)
+            # print(splitQuery)
             # will the id place in order?????????
             if len(splitQuery) == 3:
                 res = sortId(res, splitQuery)
@@ -179,7 +179,7 @@ def sortId(res, order):
             for j in res:
                 if j["id"] == i:
                     new.append(j)
-    print("shit", new)
+    # print("shit", new)
     return new
 
 
@@ -210,7 +210,7 @@ def sortCreation(res, order):
                 otherStyleTime = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
                 if j["creation_time"] == otherStyleTime:
                     new.append(j)
-    print("shit", new)
+    # print("shit", new)
     return new
 
 
@@ -235,7 +235,7 @@ def sortIndicator(res, order):
             for j in res:
                 if j["indicator"] == i:
                     new.append(j)
-    print("shit", new)
+    # print("shit", new)
     return new
 
 
@@ -308,8 +308,8 @@ def handleGet(id):
 
 
 def handleDelete(id):
-    print(id)
-    print(type(id))
+    # print(id)
+    # print(type(id))
     query = f"Select * from countries where id = {id}"
     res = handleCommand(query)
 
@@ -317,7 +317,7 @@ def handleDelete(id):
         query = f"Delete from countries where id = {id}"
         handleCommand(query)
         res = handleCommand(f"Select * from countries where id = {id}")
-        print(res)
+        # print(res)
         return {"message": f"The collection {id} was removed from the database!", "id": f"{id}"}, 200
     else:
         return {"message": f"The collection {id} cannot be founded from the database!"}, 404
@@ -364,6 +364,9 @@ class q6(Resource):
     @api.doc(params={"query": ""})
     def get(self, id, year):
         query = parser.parse_args()["query"]
+        if not query:
+
+            return handleGetLimit(id, year, [1]), 200
         if "+" == query[0] or "-" == query[0] and query[1:].isdigit():
             return handleGetLimit(id, year, query), 200
         else:
@@ -374,13 +377,22 @@ def handleGetLimit(id, year, query):
 
     if query[0] == "+":
         query = int(query[1:])
+        if query > 100:
+            query = 100
         sql = f'Select * from countries where id={id} and date={year} order by value desc LIMIT {query}'
         res = handleCommand(sql)
         return getQ6(res)
 
     if query[0] == "-":
         query = int(query[1:])
+        if query > 100:
+            query = 100
         sql = f'Select * from countries where id={id} and date={year} order by value LIMIT {query}'
+        res = handleCommand(sql)
+        return getQ6(res)
+
+    if query[0] == 1:
+        sql = f'Select * from countries where id={id} and date={year} order by value LIMIT 10'
         res = handleCommand(sql)
         return getQ6(res)
 
@@ -407,7 +419,7 @@ def getQ6(res):
 def updateTableId(content, idValue):
     count = handleCommand("Select count(*) from countries")
     count = count[0][0]
-    print("beforeinsert:", count)
+    # print("beforeinsert:", count)
     conn = sqlite3.connect('z5177443.db')
     cursor = conn.cursor()
     content = content[1]
@@ -419,7 +431,7 @@ def updateTableId(content, idValue):
             cursor.execute("insert into countries values (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                            [count, i["indicator"]["id"], i["indicator"]["value"], i["country"]["id"], i["country"]["value"], i['countryiso3code'],
                             i["date"], i["value"], i["unit"], i["obs_status"], i["decimal"], dt, idValue])
-    print("afterinsert:", count)
+    # print("afterinsert:", count)
     conn.commit()
     conn.close()
 
@@ -449,4 +461,4 @@ def createDb():
 
 if __name__ == '__main__':
     createDb()
-    app.run(host='0.0.0.0', port=80, debug=True)
+    app.run(debug=True)
